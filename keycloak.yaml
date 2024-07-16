@@ -41,8 +41,16 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:25.0.1
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /opt/keycloak/conf/keys
+              readOnly: true
           args: ["start"]
           env:
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: "/opt/keycloak/conf/keys/tls.key"
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: "/opt/keycloak/conf/keys/tls.crt"
             - name: KEYCLOAK_ADMIN
               value: "admin"
             - name: KEYCLOAK_ADMIN_PASSWORD
@@ -78,3 +86,8 @@ spec:
             httpGet:
               path: /realms/master
               port: 8080
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: keycloak-tls
+            defaultMode: 0644 
