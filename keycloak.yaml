@@ -10,18 +10,26 @@ spec:
       port: 8080
       targetPort: 8080
       nodePort: 30001
+    - name: https
+      port: 8443
+      targetPort: 8443
+      nodePort: 30443
+    - name: ispn
+      port: 7800
+      targetPort: 7800
+      protocol: TCP
   selector:
     app: keycloak
   type: NodePort
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: keycloak
   labels:
     app: keycloak
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: keycloak
@@ -32,7 +40,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: nutthaphon/keycloak:25.0
+          image: quay.io/keycloak/keycloak:25.0.1
           args: ["start"]
           env:
             - name: KEYCLOAK_ADMIN
@@ -49,12 +57,24 @@ spec:
               value: "testuser"
             - name: KC_DB_PASSWORD
               value: "testpassword"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_CACHE
+              value: "ispn"
+            - name: KC_CACHE_STACK
+              value: "kubernetes"
+            - name: JGROUPS_DISCOVERY_PROTOCOL
+              value: dns.DNS_PING
+            - name: JGROUPS_DISCOVERY_PROPERTIES
+              value: "dns_query=keycloak-headless.keycloak.svc.cluster.local" 
+            - name: jgroups.dns.query
+              value: "keycloak-headless.keycloak.svc.cluster.local"
           ports:
             - name: http
               containerPort: 8080
+            - name: https
+              containerPort: 8443
           readinessProbe:
             httpGet:
               path: /realms/master
               port: 8080
-      imagePullSecrets:
-        - name: regcred
